@@ -593,7 +593,7 @@ string SplitNet::traverseOriginalNet(const NetRouteNode& node, vector<SplitNet*>
 			    //std::cout << " Sibling upVias: " << via << std::endl;
 			    ////std::cout << " Next node: " << next << std::endl;
 			    if (via == next) {
-				    return sibling->name();
+				    return sibling->name() + " @ " + std::to_string(via.x()) + " " + std::to_string(via.y());
 			    }
 		    }
 	    }
