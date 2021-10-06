@@ -188,6 +188,10 @@ public:
     void write(ostream& os, const string& design, const Rectangle& die, const Point& pitch, const unsigned dir) const;
 
     static bool isSeparate(const SplitNet* m, const SplitNet* n);
+
+    vector<NetRouteNode> nextNodeInOriginalNet(const NetRouteNode& node, vector<NetRouteNode>& visited) const;
+
+    string traverseOriginalNet(const NetRouteNode& node, vector<SplitNet*> siblings, vector<NetRouteNode>& visited) const;
 };
 
 }  // namespace db

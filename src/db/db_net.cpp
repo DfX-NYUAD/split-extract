@@ -515,3 +515,91 @@ bool SplitNet::isSeparate(const SplitNet* m, const SplitNet* n) {
     }
     return !Rectangle::hasIntersect(*m->_parent, *n->_parent);
 }
+
+vector<NetRouteNode> SplitNet::nextNodeInOriginalNet(const NetRouteNode& node, vector<NetRouteNode>& visited) const {
+	vector<NetRouteNode> ret;
+
+	//std::cout << "Node: " << node << std::endl;
+	////std::cout << " Parent net, #segments: " << this->parent()->segments.size() << std::endl;
+
+	// node.adjs is vector<unsigned>, holding indices for adjacent segments, related to parent net's segments
+	for (const unsigned& adj : node.adjs) {
+
+		// segment adjacent to node, w.r.t. parent net
+		//
+		// also do sanity checks before assignments
+		if (this->parent()->segments.size() <= adj) {
+			continue;
+		}
+		const NetRouteSegment& adjSeg = this->parent()->segments[adj];
+		//
+		// related nodes
+		if (this->parent()->nodes.size() <= adjSeg.fromNode) {
+			continue;
+		}
+		if (this->parent()->nodes.size() <= adjSeg.toNode) {
+			continue;
+		}
+		const NetRouteNode& fromNode = this->parent()->nodes[adjSeg.fromNode];
+		const NetRouteNode& toNode = this->parent()->nodes[adjSeg.toNode];
+
+		// next node is the opposing node in the adjacent segment
+		NetRouteNode next;
+		if (fromNode == node)
+			next = toNode;
+		else if (toNode == node)
+			next = fromNode;
+		// the node doesn't match any node of the adjacent segment; shouldn't happen
+		else {
+			continue;
+		}
+
+		// ignore next nodes that have been visited before
+		// must includes nodes of split net itself, make sure to initialize vector<NetRouteNode>& visited
+		// accordingly through the first call
+		bool skip = false;
+		for (const NetRouteNode& node : visited) {
+			if (next == node) {
+				skip = true;
+				break;
+			}
+		}
+
+		if (!skip) {
+			//std::cout << " Next node: " << next << std::endl;
+			ret.push_back(next);
+		}
+	}
+
+	return ret;
+}
+
+string SplitNet::traverseOriginalNet(const NetRouteNode& node, vector<SplitNet*> siblings, vector<NetRouteNode>& visited) const {
+
+	// traverse all the next nodes (that have not been visited before)
+	vector<NetRouteNode> nextNodes = this->nextNodeInOriginalNet(node, visited);
+	for (const NetRouteNode next : nextNodes) {
+
+	    // mark next node as visited
+	    visited.push_back(next);
+
+	    // break if the next node is an up-via for some sibling net
+	    for (SplitNet* sibling : siblings) {
+
+		//    std::cout << "Sibling split net: " << sibling->name()
+		//	    << ", #upVias: " << sibling->upVias.size() << std::endl;
+
+		    for (const NetRouteUpNode& via : sibling->upVias) {
+			    //std::cout << " Sibling upVias: " << via << std::endl;
+			    ////std::cout << " Next node: " << next << std::endl;
+			    if (via == next) {
+				    return sibling->name();
+			    }
+		    }
+	    }
+
+	    return this->traverseOriginalNet(next, siblings, visited);
+	}
+
+	return string();
+}

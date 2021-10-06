@@ -301,7 +301,105 @@ void Database::setupGraph() {
             }
         }
     }
-    graph.run(cleanSplitNets, images[0], *this, pitch, dir, io::IOModule::DefPlacement);
+
+    for (SplitNet* sn : cleanSplitNets) {
+
+	    std::cout << "Split net: " << sn->name() << std::endl;
+
+	    //std::cout << " Original net: " << sn->parent()->name() << std::endl;
+	    //std::cout << " #Pins: " << sn->numPins() << std::endl;
+	    //
+	    //std::cout << " #Segments: " << sn->segments.size() << std::endl;
+	    //for (const NetRouteSegment& segment : sn->segments) {
+	    //        std::cout << "  fromNode: " << segment.fromNode << ", toNode: " << segment.toNode << std::endl; 
+	    //        //std::cout << "   fromNode: " << sn->nodes[segment.fromNode] << std::endl;
+	    //        //std::cout << "   toNode: " << sn->nodes[segment.toNode] << std::endl;
+	    //}
+
+	    // log route nodes and pins connected to this split net
+	    for (const Layer* layer : layers) {
+
+		    if (layer->rIdx == static_cast<int>(DBModule::Metal))
+			    break;
+
+		    //std::cout << " Layer " << layer->name() << ", #Nodes: " << sn->getNodes(layer).size() << std::endl;
+
+		    for (NetRouteNode& node : sn->getNodes(layer)) {
+			    //std::cout << "  " << node << std::endl;
+
+			    if (node.pin() != nullptr) {
+				    std::cout << "   Pin: " << node.pin()->name() << std::endl;
+
+				    if (node.pin()->cell != nullptr) {
+					    std::cout << "    Cell: " << node.pin()->cell->name() << std::endl;
+				    }
+				    //else {
+				    //        std::cout << "   Cell not assigned" << std::endl;
+				    //}
+			    }
+			    //else {
+			    //        std::cout << "  Pin not assigned" << std::endl;
+			    //}
+		    }
+	    }
+
+	    //NOTE shapes are empty; related data is in vector<NetRouteSegment> segments
+	    //std::cout << " Shapes -- #Shapes: " << sn->shapes.size() << std::endl;
+	    //for (const Geometry& shape : sn->shapes) {
+	    //        std::cout << shape << std::endl;
+	    //}
+
+	    std::cout << " Type of split net: ";
+	    if (sn->isSource()) {
+		    std::cout << "source";
+	    }
+	    else if (sn->isSink()) {
+		    std::cout << "sink";
+	    }
+	    // NOTE cannot occur for cleanSplitNets
+	    //else {
+	    //        std::cout << "other";
+	    //}
+	    std::cout << std::endl;
+
+	    // handle up-vias / open pins
+
+	    // derive all the sibling split nets
+	    //
+	    vector<SplitNet*> siblings;
+	    for (SplitNet* sibling : cleanSplitNets) {
+
+		    // no sibling
+		    if (sibling->parent()->name() != sn->parent()->name())
+			    continue;
+		    // identity; same net
+		    if (sibling->name() == sn->name())
+			    continue;
+
+		    //std::cout << " Sibling net: " << sibling->name() << std::endl;
+		    siblings.push_back(sibling);
+	    }
+	    //std::cout << " #Sibling split nets: " << siblings.size() << std::endl;
+
+	    // 2) log up-vias for this split net, derive matching up-via from sibling split net
+	    std::cout << " Up-vias/open pins: " << std::endl;
+	    for (const NetRouteUpNode& via : sn->upVias) {
+
+		std::cout << "  Location: " << via[dir] << ", " << via[1 - dir] << std::endl;
+
+		// for each up-via/open pin, also determine the matching up-via/open pin from the true connection,
+		// i.e. from some other split net of the same parent net
+		//
+		// initialize visited nodes with nodes of split; prevents traversal from going back to this split net
+		vector<NetRouteNode> visited = sn->nodes;
+		std::cout << "  True connection: " << sn->traverseOriginalNet(via, siblings, visited) << std::endl;
+	    }
+    }
+
+    return;
+
+    //// NOTE original call, not need here
+    //graph.run(cleanSplitNets, images[0], *this, pitch, dir, io::IOModule::DefPlacement);
 }
 
 void Database::setup() {
