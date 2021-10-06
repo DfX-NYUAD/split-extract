@@ -191,7 +191,13 @@ public:
 
     vector<NetRouteNode> nextNodeInOriginalNet(const NetRouteNode& node, vector<NetRouteNode>& visited) const;
 
-    string traverseOriginalNet(const NetRouteNode& node, vector<SplitNet*> siblings, vector<NetRouteNode>& visited) const;
+    void traverseOriginalNet(
+		    const NetRouteNode& node,
+		    vector<SplitNet*> const& siblings,
+		    vector<NetRouteNode>& visited,
+		    multimap< unsigned, std::pair<SplitNet*, NetRouteNode> >& candidates,
+		    const unsigned traversedDist = 0
+	    ) const;
 };
 
 }  // namespace db

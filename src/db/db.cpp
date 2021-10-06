@@ -268,39 +268,40 @@ void Database::setupGraph() {
         return;
     }
 
-    unsigned dir = 0;
-    Point pitch;
-    for (const Layer* layer : layers) {
-        if (layer->rIdx + 1 == static_cast<int>(DBModule::Metal)) {
-            switch (layer->direction) {
-                case 'h':
-                    dir = 0;
-                    pitch.y(layer->pitch);
-                    break;
-                case 'v':
-                    dir = 1;
-                    pitch.x(layer->pitch);
-                    break;
-                default:
-                    printlog(
-                        LOG_ERROR, "unidentified layer direction %c in %s : %d", layer->direction, __FILE__, __LINE__);
-                    return;
-            }
-        } else if (layer->rIdx == static_cast<int>(DBModule::Metal)) {
-            switch (layer->direction) {
-                case 'h':
-                    pitch.y(layer->pitch);
-                    break;
-                case 'v':
-                    pitch.x(layer->pitch);
-                    break;
-                default:
-                    printlog(
-                        LOG_ERROR, "unidentified layer direction %c in %s : %d", layer->direction, __FILE__, __LINE__);
-                    return;
-            }
-        }
-    }
+////  NOTE original calls, not need here
+//    unsigned dir = 0;
+//    Point pitch;
+//    for (const Layer* layer : layers) {
+//        if (layer->rIdx + 1 == static_cast<int>(DBModule::Metal)) {
+//            switch (layer->direction) {
+//                case 'h':
+//                    dir = 0;
+//                    pitch.y(layer->pitch);
+//                    break;
+//                case 'v':
+//                    dir = 1;
+//                    pitch.x(layer->pitch);
+//                    break;
+//                default:
+//                    printlog(
+//                        LOG_ERROR, "unidentified layer direction %c in %s : %d", layer->direction, __FILE__, __LINE__);
+//                    return;
+//            }
+//        } else if (layer->rIdx == static_cast<int>(DBModule::Metal)) {
+//            switch (layer->direction) {
+//                case 'h':
+//                    pitch.y(layer->pitch);
+//                    break;
+//                case 'v':
+//                    pitch.x(layer->pitch);
+//                    break;
+//                default:
+//                    printlog(
+//                        LOG_ERROR, "unidentified layer direction %c in %s : %d", layer->direction, __FILE__, __LINE__);
+//                    return;
+//            }
+//        }
+//    }
 
     for (SplitNet* sn : cleanSplitNets) {
 
@@ -387,18 +388,52 @@ void Database::setupGraph() {
 	    }
 	    //std::cout << " #Sibling split nets: " << siblings.size() << std::endl;
 
-	    // 2) log up-vias for this split net, derive matching up-via from sibling split net
+	    // 2) log up-vias for this split net
 	    std::cout << " Begin up-vias/open pins -- #: " << sn->upVias.size() << std::endl;
 	    for (const NetRouteUpNode& via : sn->upVias) {
 
-		std::cout << "  Location: " << via[dir] << " " << via[1 - dir] << std::endl;
+		std::cout << "  Location: " << via << std::endl;
 
-		// for each up-via/open pin, also determine the matching up-via/open pin from the true connection,
-		// i.e. from some other split net of the same parent net
+		// 3) for each up-via/open pin, also determine the matching up-vias/open pins from
+		// other, sibling splits net of the same parent net
 		//
 		// initialize visited nodes with nodes of split; prevents traversal from going back to this split net
 		vector<NetRouteNode> visited = sn->nodes;
-		std::cout << "   True connection: " << sn->traverseOriginalNet(via, siblings, visited) << std::endl;
+		// candidate up-vias, key'ed by length of path traversal
+		// multimap as there might be cases with different candidate up-vias having same path distance
+		multimap< unsigned, std::pair<SplitNet*, NetRouteNode> > candidates;
+
+		sn->traverseOriginalNet(via, siblings, visited, candidates);
+
+		std::cout << "   True connection: ";
+
+		// pick the 1st candidate (has shortest path-traversal distance); for-loop just for convenience as
+		// picking first from candidates via iterator was more difficult to write
+		for (const auto& candidate : candidates) {
+
+			// name of split net for true connectivity
+			std::cout << candidate.second.first->name();
+
+			// type of split net for true connectivity
+			if (candidate.second.first->isSource()) {
+				std::cout << " - type: source - ";
+			}
+			else if (candidate.second.first->isSink()) {
+				std::cout << " - type: sink - ";
+			}
+			// NOTE cannot occur for cleanSplitNets
+			else {
+				std::cout << " - type: other - ";
+			}
+
+			// location of matching up-via for true connectivity
+			std::cout << "@ " << candidate.second.second;
+
+			break;
+		}
+		if (candidates.empty())
+			std::cout << "N/A";
+		std::cout << std::endl;
 	    }
 	    std::cout << " End up-vias/open pins" << std::endl;
     }

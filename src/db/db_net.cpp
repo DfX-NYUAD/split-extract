@@ -574,32 +574,63 @@ vector<NetRouteNode> SplitNet::nextNodeInOriginalNet(const NetRouteNode& node, v
 	return ret;
 }
 
-string SplitNet::traverseOriginalNet(const NetRouteNode& node, vector<SplitNet*> siblings, vector<NetRouteNode>& visited) const {
+void SplitNet::traverseOriginalNet(
+		    const NetRouteNode& node,
+		    vector<SplitNet*> const& siblings,
+		    vector<NetRouteNode>& visited,
+		    multimap< unsigned, std::pair<SplitNet*, NetRouteNode> >& candidates,
+		    const unsigned traversedDist
+		) const {
 
-	// traverse all the next nodes (that have not been visited before)
+	// 1) determine all the next nodes (that have not been visited before)
 	vector<NetRouteNode> nextNodes = this->nextNodeInOriginalNet(node, visited);
+
+	//std::cout << " #next nodes for this recursion: " << nextNodes.size() << std::endl;
+
+	// 2) go over all these next nodes
 	for (const NetRouteNode next : nextNodes) {
 
 	    // mark next node as visited
 	    visited.push_back(next);
 
-	    // break if the next node is an up-via for some sibling net
+	    // determine distance along the path; sums up while traversing nodes
+	    // (recall that traversal is implicitly ensured to be along actual routing segment, as next nodes are
+	    // iteratively derived from adjacent segment)
+	    unsigned dist = traversedDist + NetRouteNode::manhattanDistance(node, next);
+
+	    // check if the next node is an up-via for some sibling net
+	    bool _upVia = false;
 	    for (SplitNet* sibling : siblings) {
 
-		//    std::cout << "Sibling split net: " << sibling->name()
-		//	    << ", #upVias: " << sibling->upVias.size() << std::endl;
+		    //std::cout << "Sibling split net: " << sibling->name();
+		    //std::cout << ", #upVias: " << sibling->upVias.size() << std::endl;
 
 		    for (const NetRouteUpNode& via : sibling->upVias) {
 			    //std::cout << " Sibling upVias: " << via << std::endl;
 			    ////std::cout << " Next node: " << next << std::endl;
+
 			    if (via == next) {
-				    return sibling->name() + " @ " + std::to_string(via.x()) + " " + std::to_string(via.y());
+				    _upVia = true;
+
+				    // if so, memorize this as candidate
+				    // and continue with other next nodes
+				    candidates.emplace(
+						    std::make_pair(dist, std::make_pair(sibling, via) )
+					    );
+
+				    // this breaks checking the next node against remaining upVias of current sibling
+				    break;
 			    }
 		    }
+		    // this breaks checking the next node against remaining sibling split nets; if next node is already
+		    // found to be matching some upVia of some sibling, it cannot be an upVia as well for another
+		    // sibling
+		    if (_upVia)
+			    continue;
 	    }
 
-	    return this->traverseOriginalNet(next, siblings, visited);
+	    // else, dive deeper by further following the path along the original net
+	    if (!_upVia)
+		    this->traverseOriginalNet(next, siblings, visited, candidates, dist);
 	}
-
-	return string();
 }
