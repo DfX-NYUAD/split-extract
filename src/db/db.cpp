@@ -122,7 +122,18 @@ void Database::setupSplitNets() {
             if (net->nodes[i].comp() == static_cast<int>(numComps)) ++numComps;
         }
         for (unsigned i = 0; i != numComps; ++i) {
-            const string& name = net->name() + "_split_" + to_string(i);
+
+            //const string& name = net->name() + "_split_" + to_string(i);
+	    //// NOTE original naming above
+	    //
+	    // revised naming, matches naming of other split DEFs
+            const string& name = net->name() + "_" + to_string(i);
+	    // TODO follow naming of split nets w/ I/O pins from other split DEFs
+	    // - However, couldn't figure out how to see in advance, before calling addSplitNet and handling of pins
+	    // below, how to check if this split net will have some I/O pin
+	    // - Also, naming scheme in other split DEFs not entirely clear; how are split nets, of same original net,
+	    // named with mulitple OUTPUT pins spread across multiple split nets?
+
             SplitNet* splitNet = addSplitNet(name, net->ndr, net);
             for (unsigned j = 0; j != net->nodes.size(); ++j) {
                 NetRouteNode& node = net->nodes[j];
