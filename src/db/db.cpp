@@ -123,18 +123,26 @@ void Database::setupSplitNets() {
         }
         for (unsigned i = 0; i != numComps; ++i) {
 
+	    // NOTE original naming 
             //const string& name = net->name() + "_split_" + to_string(i);
-	    //// NOTE original naming above
-	    //
+
 	    // revised naming, matches naming of other split DEFs
             const string& name = net->name() + "_" + to_string(i);
-	    // TODO follow naming of split nets w/ I/O pins from other split DEFs
-	    // - However, couldn't figure out how to see in advance, before calling addSplitNet and handling of pins
-	    // below, how to check if this split net will have some I/O pin
-	    // - Also, naming scheme in other split DEFs not entirely clear; how are split nets, of same original net,
-	    // named with mulitple OUTPUT pins spread across multiple split nets?
 
-            SplitNet* splitNet = addSplitNet(name, net->ndr, net);
+	    // (TODO) other split DEFs: split nets w/ I/O pins have only the baseline name, no "_0" extension However,
+	    // not possible here, as there's already a split net with the same baseline name, namely that
+	    // holding only the pin itself -- changing datastructure and handling for this codebase seem too convoluted
+	    //
+            //SplitNet* splitNet;
+	    //if ((i == 0) && (net->numIOPins() > 0)) {
+	    //        splitNet = addSplitNet(net->name(), net->ndr, net);
+	    //}
+	    //else {
+	    //        splitNet = addSplitNet(net->name() + "_" + to_string(i), net->ndr, net);
+	    //}
+
+	    SplitNet* splitNet = addSplitNet(name, net->ndr, net);
+
             for (unsigned j = 0; j != net->nodes.size(); ++j) {
                 NetRouteNode& node = net->nodes[j];
                 if (node.comp() != static_cast<int>(i)) continue;
@@ -412,38 +420,39 @@ void Database::setupGraph() {
 		vector<NetRouteNode> visited = sn->nodes;
 		// candidate up-vias, key'ed by length of path traversal
 		// multimap as there might be cases with different candidate up-vias having same path distance
-		multimap< unsigned, std::pair<SplitNet*, NetRouteNode> > candidates;
+		multimap< unsigned, std::pair<const SplitNet*, NetRouteNode> > candidates;
 
 		sn->traverseOriginalNet(via, siblings, visited, candidates);
 
 		std::cout << "   True connection: ";
 
-		// pick the 1st candidate (has shortest path-traversal distance); for-loop just for convenience as
-		// picking first from candidates via iterator was more difficult to write
-		for (const auto& candidate : candidates) {
-
-			// name of split net for true connectivity
-			std::cout << candidate.second.first->name();
-
-			// type of split net for true connectivity
-			if (candidate.second.first->isSource()) {
-				std::cout << " - type: source - ";
-			}
-			else if (candidate.second.first->isSink()) {
-				std::cout << " - type: sink - ";
-			}
-			// NOTE cannot occur for cleanSplitNets
-			else {
-				std::cout << " - type: other - ";
-			}
-
-			// location of matching up-via for true connectivity
-			std::cout << "@ " << candidate.second.second;
-
-			break;
+		// true connection couldn't be derived; shouldn't happen
+		if (candidates.empty()) {
+			std::cout << "N/A" << std::endl;
+			continue;
 		}
-		if (candidates.empty())
-			std::cout << "N/A";
+
+		// pick the 1st candidate; has shortest path-traversal distance
+		auto iter = candidates.begin();
+
+		// name of split net for true connectivity
+		std::cout << (*iter).second.first->name();
+
+		// type of split net for true connectivity
+		if ((*iter).second.first->isSource()) {
+			std::cout << " - type: source -";
+		}
+		else if ((*iter).second.first->isSink()) {
+			std::cout << " - type: sink -";
+		}
+		// NOTE cannot occur for cleanSplitNets
+		else {
+			std::cout << " - type: other -";
+		}
+
+		// location of matching up-via for true connectivity
+		std::cout << " @ " << (*iter).second.second;
+
 		std::cout << std::endl;
 	    }
 	    std::cout << " End up-vias/open pins" << std::endl;

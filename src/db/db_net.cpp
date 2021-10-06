@@ -525,6 +525,8 @@ vector<NetRouteNode> SplitNet::nextNodeInOriginalNet(const NetRouteNode& node, v
 	// node.adjs is vector<unsigned>, holding indices for adjacent segments, related to parent net's segments
 	for (const unsigned& adj : node.adjs) {
 
+		//std::cout << " adj: " << adj << std::endl;
+
 		// segment adjacent to node, w.r.t. parent net
 		//
 		// also do sanity checks before assignments
@@ -554,6 +556,8 @@ vector<NetRouteNode> SplitNet::nextNodeInOriginalNet(const NetRouteNode& node, v
 			continue;
 		}
 
+		//std::cout << " Next node, before checking of visit: " << next << std::endl;
+
 		// ignore next nodes that have been visited before
 		// must includes nodes of split net itself, make sure to initialize vector<NetRouteNode>& visited
 		// accordingly through the first call
@@ -566,7 +570,7 @@ vector<NetRouteNode> SplitNet::nextNodeInOriginalNet(const NetRouteNode& node, v
 		}
 
 		if (!skip) {
-			//std::cout << " Next node: " << next << std::endl;
+			//std::cout << " Next node, not visited yet: " << next << std::endl;
 			ret.push_back(next);
 		}
 	}
@@ -578,12 +582,25 @@ void SplitNet::traverseOriginalNet(
 		    const NetRouteNode& node,
 		    vector<SplitNet*> const& siblings,
 		    vector<NetRouteNode>& visited,
-		    multimap< unsigned, std::pair<SplitNet*, NetRouteNode> >& candidates,
+		    multimap< unsigned, std::pair<const SplitNet*, NetRouteNode> >& candidates,
 		    const unsigned traversedDist
 		) const {
 
-	// 1) determine all the next nodes (that have not been visited before)
-	vector<NetRouteNode> nextNodes = this->nextNodeInOriginalNet(node, visited);
+	// 1) determine all the next nodes to consider
+	vector<NetRouteNode> nextNodes;
+	// 1a) regular case: node holds adjacent nodes, derive from those
+	if (!node.adjs.empty())
+		nextNodes = this->nextNodeInOriginalNet(node, visited);
+	// 1b) corner case: node holds no adjacent nodes; by observation, that should only occur for nodes that are
+	// representing IO pins -- handling of corner case: define up-vias of all sibling split nets as next nodes;
+	// allows at least to determine nearest of those up-vias, by Manhattan distance across nodes, not actual paths
+	else {
+		for (const SplitNet* sibling : siblings) {
+			for (const NetRouteUpNode& via : sibling->upVias) {
+				nextNodes.push_back(via);
+			}
+		}
+	}
 
 	//std::cout << " #next nodes for this recursion: " << nextNodes.size() << std::endl;
 
@@ -600,7 +617,7 @@ void SplitNet::traverseOriginalNet(
 
 	    // check if the next node is an up-via for some sibling net
 	    bool _upVia = false;
-	    for (SplitNet* sibling : siblings) {
+	    for (const SplitNet* sibling : siblings) {
 
 		    //std::cout << "Sibling split net: " << sibling->name();
 		    //std::cout << ", #upVias: " << sibling->upVias.size() << std::endl;
@@ -628,9 +645,39 @@ void SplitNet::traverseOriginalNet(
 		    if (_upVia)
 			    continue;
 	    }
-
 	    // else, dive deeper by further following the path along the original net
 	    if (!_upVia)
 		    this->traverseOriginalNet(next, siblings, visited, candidates, dist);
+
+	    // also check if the next node is an I/O pin of the parent net
+	    //
+	    for (const auto& pin : this->parent()->pins) {
+
+		    if (pin->iopin == nullptr)
+			    continue;
+
+		//    std::cout << " IO PIN: " << pin->iopin->name
+		//	    << " @ (" << pin->iopin->x << " , " << pin->iopin->y << ")"
+		//	    << std::endl;
+
+		    if (next.pin() == nullptr)
+			    continue;
+
+		    //std::cout << " NEXT NODE'S PIN " << next.pin()->name() << std::endl;
+
+		    if (next.pin()->name() == pin->iopin->name) {
+
+			    //std::cout << " Matching IO pin: " << pin->iopin->name << std::endl;
+
+			    candidates.emplace(
+					    std::make_pair(dist, std::make_pair(
+						// split net of IO pin
+						pin->splitNet(),
+						// NetRouteNode of IO pin
+						pin->nrn()
+					)));
+			    break;
+		    }
+	    }
 	}
 }

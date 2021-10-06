@@ -23,7 +23,7 @@ public:
 
     const Layer* layer() const { return _layer; }
     int comp() const { return _comp; }
-    Pin* pin() { return _pin; }
+    Pin* pin() const { return _pin; }
 
     void comp(const int c) { _comp = c; }
     void pin(Pin* p) { _pin = p; }
@@ -138,7 +138,7 @@ public:
         : NetRouting(name, nLayers), _use(use), ndr(ndr) {}
     bool globalRouted() const { return gRouted; }
     bool detailedRouted() const { return dRouted; }
-    Pin* iPin() { return _iPin; }
+    Pin* iPin() const { return _iPin; }
     unsigned numOPins() const { return _numOPins; }
     unsigned numIOPins() const { return _numIOPins; }
     const Pin* upPin() const { return _upPin; }
@@ -180,8 +180,8 @@ public:
     void select() { _isSelected = true; }
     void totalCap(const double cap) { _totalCap = cap; }
 
-    bool isSink() { return !iPin() && numOPins() && _parent; }
-    bool isSource() { return iPin() && _parent; }
+    bool isSink() const { return !iPin() && numOPins() && _parent; }
+    bool isSource() const { return iPin() && _parent; }
 
     void addUpVia(const NetRouteNode& n);
 
@@ -195,7 +195,7 @@ public:
 		    const NetRouteNode& node,
 		    vector<SplitNet*> const& siblings,
 		    vector<NetRouteNode>& visited,
-		    multimap< unsigned, std::pair<SplitNet*, NetRouteNode> >& candidates,
+		    multimap< unsigned, std::pair<const SplitNet*, NetRouteNode> >& candidates,
 		    const unsigned traversedDist = 0
 	    ) const;
 };
