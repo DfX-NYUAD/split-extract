@@ -97,10 +97,10 @@ ofstream io::IOModule::write(const string& file, const bool verbose) {
 
     ofstream ofs(file.c_str());
     if (!ofs.good()) {
-        printlog(LOG_ERROR, "Unable to create/open DEF: %s", file.c_str());
+        printlog(LOG_ERROR, "Unable to create/open output file: %s", file.c_str());
     }
     if (verbose) {
-        printlog(LOG_INFO, "writing %s", file.c_str());
+        printlog(LOG_INFO, "Writing to %s", file.c_str());
     }
     return ofs;
 }

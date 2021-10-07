@@ -288,6 +288,7 @@ void Database::setupGraph() {
     }
 
 ////  NOTE original calls, not need here
+////  NOTE not entirely sure what's done here, looks like scaling of absolute dimensions to relative ones
 //    unsigned dir = 0;
 //    Point pitch;
 //    for (const Layer* layer : layers) {
@@ -322,69 +323,81 @@ void Database::setupGraph() {
 //        }
 //    }
 
+    printlog(LOG_INFO, "Writing out split nets, with open pins and true connectivity ...");
+
+    std::streambuf* buf;
+    std::ofstream ofs = io::IOModule::write(io::IOModule::DefPlacement);
+    if (!ofs.good()) {
+	    buf = std::cout.rdbuf();
+    }
+    else {
+	    buf = ofs.rdbuf();
+    }
+    std::ostream out(buf);
+
     for (SplitNet* sn : cleanSplitNets) {
 
-	    std::cout << "Split net: " << sn->name() << std::endl;
+	    out << "Split net: " << sn->name() << std::endl;
 
-	    //std::cout << " Original net: " << sn->parent()->name() << std::endl;
-	    //std::cout << " #Pins: " << sn->numPins() << std::endl;
+	    //out << " Original net: " << sn->parent()->name() << std::endl;
+	    //out << " #Pins: " << sn->numPins() << std::endl;
 	    //
-	    //std::cout << " #Segments: " << sn->segments.size() << std::endl;
+	    //out << " #Segments: " << sn->segments.size() << std::endl;
 	    //for (const NetRouteSegment& segment : sn->segments) {
-	    //        std::cout << "  fromNode: " << segment.fromNode << ", toNode: " << segment.toNode << std::endl; 
-	    //        //std::cout << "   fromNode: " << sn->nodes[segment.fromNode] << std::endl;
-	    //        //std::cout << "   toNode: " << sn->nodes[segment.toNode] << std::endl;
+	    //        out << "  fromNode: " << segment.fromNode << ", toNode: " << segment.toNode << std::endl; 
+	    //        //out << "   fromNode: " << sn->nodes[segment.fromNode] << std::endl;
+	    //        //out << "   toNode: " << sn->nodes[segment.toNode] << std::endl;
 	    //}
 
-	    std::cout << " Type: ";
+	    out << " Type: ";
 	    if (sn->isSource()) {
-		    std::cout << "source";
+		    out << "source";
 	    }
 	    else if (sn->isSink()) {
-		    std::cout << "sink";
+		    out << "sink";
 	    }
 	    // NOTE cannot occur for cleanSplitNets
 	    else {
-	            std::cout << "other";
+	            out << "other";
 	    }
-	    std::cout << std::endl;
+	    out << std::endl;
 
 	    // log route nodes and pins connected to this split net
-	    std::cout << " Begin pins/cells" << std::endl;
+	    out << " Begin pins/cells" << std::endl;
 	    for (const Layer* layer : layers) {
 
 		    // stop at split layer
 		    if (layer->rIdx == static_cast<int>(DBModule::Metal))
 			    break;
 
-		    //std::cout << " Layer " << layer->name() << ", #Nodes: " << sn->getNodes(layer).size() << std::endl;
+		    //out << " Layer " << layer->name() << ", #Nodes: " << sn->getNodes(layer).size() << std::endl;
 
 		    for (NetRouteNode& node : sn->getNodes(layer)) {
-			    //std::cout << "  " << node << std::endl;
+			    //out << "  " << node << std::endl;
 
 			    if (node.pin() != nullptr) {
-				    std::cout << "  ";
+				    out << "  ";
 
 				    if (node.pin()->cell != nullptr) {
-					    std::cout << "Cell: " << node.pin()->cell->name() << ", Cell ";
+					    out << "Cell: " << node.pin()->cell->name() << ", Cell ";
 				    }
 				    //else {
-				    //        std::cout << "Cell not assigned" << std::endl;
+				    //        out << "Cell not assigned" << std::endl;
 				    //}
-				    std::cout << "Pin: " << node.pin()->name();
-				    std::cout << std::endl;
+				    out << "Pin: " << node.pin()->name();
+				    out << std::endl;
 			    }
 			    //else {
-			    //        std::cout << "  Pin not assigned" << std::endl;
+			    //        out << "  Pin not assigned" << std::endl;
 			    //}
 		    }
 	    }
-	    std::cout << " End pins/cells" << std::endl;
+	    out << " End pins/cells" << std::endl;
 
 	    //NOTE shapes are empty; related data is in vector<NetRouteSegment> segments
-	    //std::cout << " Shapes -- #Shapes: " << sn->shapes.size() << std::endl;
+	    //out << " Shapes -- #Shapes: " << sn->shapes.size() << std::endl;
 	    //for (const Geometry& shape : sn->shapes) {
-	    //        std::cout << shape << std::endl;
+	    //        out << shape << std::endl;
 	    //}
 
 	    // handle up-vias / open pins
@@ -402,16 +415,16 @@ void Database::setupGraph() {
 		    if (sibling->name() == sn->name())
 			    continue;
 
-		    //std::cout << " Sibling net: " << sibling->name() << std::endl;
+		    //out << " Sibling net: " << sibling->name() << std::endl;
 		    siblings.push_back(sibling);
 	    }
-	    //std::cout << " #Sibling split nets: " << siblings.size() << std::endl;
+	    //out << " #Sibling split nets: " << siblings.size() << std::endl;
 
 	    // 2) log up-vias for this split net
-	    std::cout << " Begin up-vias/open pins -- #: " << sn->upVias.size() << std::endl;
+	    out << " Begin up-vias/open pins -- #: " << sn->upVias.size() << std::endl;
 	    for (const NetRouteUpNode& via : sn->upVias) {
 
-		std::cout << "  Location: " << via << std::endl;
+		out << "  Location: " << via << std::endl;
 
 		// 3) for each up-via/open pin, also determine the matching up-vias/open pins from
 		// other, sibling splits net of the same parent net
@@ -424,11 +437,11 @@ void Database::setupGraph() {
 
 		sn->traverseOriginalNet(via, siblings, visited, candidates);
 
-		std::cout << "   True connection: ";
+		out << "   True connection: ";
 
 		// true connection couldn't be derived; shouldn't happen
 		if (candidates.empty()) {
-			std::cout << "N/A" << std::endl;
+			out << "N/A" << std::endl;
 			continue;
 		}
 
@@ -436,27 +449,31 @@ void Database::setupGraph() {
 		auto iter = candidates.begin();
 
 		// name of split net for true connectivity
-		std::cout << (*iter).second.first->name();
+		out << (*iter).second.first->name();
 
 		// type of split net for true connectivity
 		if ((*iter).second.first->isSource()) {
-			std::cout << " - type: source -";
+			out << " - type: source -";
 		}
 		else if ((*iter).second.first->isSink()) {
-			std::cout << " - type: sink -";
+			out << " - type: sink -";
 		}
 		// NOTE cannot occur for cleanSplitNets
 		else {
-			std::cout << " - type: other -";
+			out << " - type: other -";
 		}
 
 		// location of matching up-via for true connectivity
-		std::cout << " @ " << (*iter).second.second;
+		out << " @ " << (*iter).second.second;
 
-		std::cout << std::endl;
+		out << std::endl;
 	    }
-	    std::cout << " End up-vias/open pins" << std::endl;
+	    out << " End up-vias/open pins" << std::endl;
     }
+
+    ofs.close();
+
+    printlog(LOG_INFO, "Done writing out split nets, with open pins and true connectivity ...");
 
     return;
 

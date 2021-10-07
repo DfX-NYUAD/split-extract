@@ -37,7 +37,7 @@ public:
     }
 
     friend ostream& operator<<(ostream& os, const NetRouteNode& node) {
-        return cout << node.layer()->name() << " ( " << node.x() << ' ' << node.y() << " )";
+        return os << node.layer()->name() << " ( " << node.x() << ' ' << node.y() << " )";
     }
 };
 
