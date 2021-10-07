@@ -367,6 +367,7 @@ void Database::setupGraph() {
 	    for (const Layer* layer : layers) {
 
 		    // stop at split layer
+		    // NOTE not needed; split nets don't extend beyond split layer; only to break loop early
 		    if (layer->rIdx == static_cast<int>(DBModule::Metal))
 			    break;
 
@@ -392,6 +393,26 @@ void Database::setupGraph() {
 			    //}
 		    }
 	    }
+
+
+	    // corner case: for split nets only containing I/O pins above the split layer, also log the I/O pin, to
+	    // capture the entire netlist's connectivity
+	    //
+	    if (sn->numIOPins() > 0) {
+
+		    for (const auto& pin : sn->parent()->pins) {
+
+			    if (pin->iopin == nullptr)
+				    continue;
+
+			    if (sn->name() == pin->iopin->name) {
+				    out << "  ";
+				    out << "Pin: " << pin->iopin->name;
+				    out << std::endl;
+			    }
+		    }
+	    }
+
 	    out << " End pins/cells" << std::endl;
 
 	    //NOTE shapes are empty; related data is in vector<NetRouteSegment> segments
