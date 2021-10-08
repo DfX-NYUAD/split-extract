@@ -11,8 +11,8 @@ ifeq ($(mode),asan)
 else
 ifeq ($(mode),debug)
 	OPT= -O0 -ggdb -DDEBUG $(MP_OPT)
-	LIBS = -pthread -ldl
-	CFLAG =
+	LIBS = -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -ldl
+	CFLAG = -static
 else
 ifeq ($(mode),profile)
 	OPT= -O3 -pg $(MP_OPT)
