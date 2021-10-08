@@ -452,42 +452,48 @@ void Database::setupGraph() {
 		//
 		// initialize visited nodes with nodes of split; prevents traversal from going back to this split net
 		vector<NetRouteNode> visited = sn->nodes;
-		// candidate up-vias, key'ed by length of path traversal
-		// multimap as there might be cases with different candidate up-vias having same path distance
+		// candidate up-vias, key'ed by length of wiring path 
+		// multimap as there might be cases with different candidate up-vias having same wiring path distance
 		multimap< unsigned, std::pair<const SplitNet*, NetRouteNode> > candidates;
 
 		sn->traverseOriginalNet(via, siblings, visited, candidates);
 
-		out << "   True connection: ";
-
 		// true connection couldn't be derived; shouldn't happen
 		if (candidates.empty()) {
-			out << "N/A" << std::endl;
+			out << "   True connection: N/A" << std::endl;
 			continue;
 		}
 
-		// pick the 1st candidate; has shortest path-traversal distance
-		auto iter = candidates.begin();
+		// list all candidates, starting with 1st, which has shortest wiring path distance
+		for (auto const& candidate : candidates) {
 
-		// name of split net for true connectivity
-		out << (*iter).second.first->name();
+			out << "   True connection: ";
 
-		// type of split net for true connectivity
-		if ((*iter).second.first->isSource()) {
-			out << " - type: source -";
+			// name of split net for true connectivity
+			out << candidate.second.first->name();
+			out << " - ";
+
+			// type of split net for true connectivity
+			if (candidate.second.first->isSource()) {
+				out << "type: source";
+			}
+			else if (candidate.second.first->isSink()) {
+				out << "type: sink";
+			}
+			// NOTE cannot occur for cleanSplitNets
+			else {
+				out << "type: other";
+			}
+
+			// location of matching up-via for true connectivity
+			out << " @ " << candidate.second.second;
+			out << " - ";
+
+			// wiring path distance distance
+			out << "BEOL wiring distance: " << candidate.first;
+
+			out << std::endl;
 		}
-		else if ((*iter).second.first->isSink()) {
-			out << " - type: sink -";
-		}
-		// NOTE cannot occur for cleanSplitNets
-		else {
-			out << " - type: other -";
-		}
-
-		// location of matching up-via for true connectivity
-		out << " @ " << (*iter).second.second;
-
-		out << std::endl;
 	    }
 	    out << " End up-vias/open pins" << std::endl;
     }
