@@ -380,12 +380,42 @@ void Database::setupGraph() {
 				    out << "  ";
 
 				    if (node.pin()->cell != nullptr) {
-					    out << "Cell: " << node.pin()->cell->name() << ", Cell ";
+					    out << "Cell: " << node.pin()->cell->name();
+					    out << " - Cell-Type: " << node.pin()->cell->ctype()->name;
+					    out << " - ";
 				    }
 				    //else {
 				    //        out << "Cell not assigned" << std::endl;
 				    //}
-				    out << "Pin: " << node.pin()->name();
+
+				    if (node.pin()->iopin != nullptr) {
+					    out << "PI/PO ";
+					    out << "Pin: " << node.pin()->name();
+					    out << " - Pin-Type: ";
+					    if (node.pin()->isSource()) {
+						    out << "PI";
+					    }
+					    else if (node.pin()->isSink()) {
+						    out << "PO";
+					    }
+					    else {
+						    out << "N/A";
+					    }
+				    }
+				    else {
+					    out << "Pin: " << node.pin()->name();
+					    out << " - Pin-Type: ";
+					    if (node.pin()->isSource()) {
+						    out << "source";
+					    }
+					    else if (node.pin()->isSink()) {
+						    out << "sink";
+					    }
+					    else {
+						    out << "N/A";
+					    }
+				    }
+
 				    out << std::endl;
 			    }
 			    //else {
@@ -405,9 +435,21 @@ void Database::setupGraph() {
 			    if (pin->iopin == nullptr)
 				    continue;
 
+			    // NOTE name and others could be taken from pin directly, pin->iopin->pin just points back
+			    // to actual pin
 			    if (sn->name() == pin->iopin->name) {
 				    out << "  ";
-				    out << "Pin: " << pin->iopin->name;
+				    out << "PI/PO Pin: " << pin->iopin->name;
+				    out << " - Pin-Type: ";
+				    if (pin->iopin->pin->isSource()) {
+					    out << "PI";
+				    }
+				    else if (pin->iopin->pin->isSink()) {
+					    out << "PO";
+				    }
+				    else {
+					    out << "N/A";
+				    }
 				    out << std::endl;
 			    }
 		    }
