@@ -1,6 +1,6 @@
 #!/bin/bash
 
-lib=~/work/libraries/Nangate_45nm/NangateOpenCellLibrary.lef
+lib=NangateOpenCellLibrary.lef
 
 for layer in 8 6 3
 do
