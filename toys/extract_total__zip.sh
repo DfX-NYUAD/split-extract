@@ -3,7 +3,7 @@
 
 lib=~/work/libraries/Nangate_45nm/NangateOpenCellLibrary.lef
 
-for layer in 8 6 3 1
+for layer in 8 6 3
 do
 	for file in `ls *.def`
 	do
