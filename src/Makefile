@@ -38,7 +38,7 @@ endif
 endif
 endif
 
-WFLAG    = -Wall -Werror
+WFLAG    = -Wall #-Werror
 
 ifeq ($(origin target),undefined)
 	target = bin
